@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package order;
+
+service OrderService {
+  rpc CreateOrder (CreateOrderRequest) returns (OrderResponse);
+}
+
+message OrderItem {
+  int32 pid = 1;
+  int32 qty = 2;
+}
+
+message CreateOrderRequest {
+  int32 uid = 1;
+  repeated OrderItem items = 2; // Cho phép gửi danh sách nhiều sản phẩm
+}
+
+message OrderResponse {
+  bool success = 1;
+  string message = 2;
+  int32 oid = 3;
+  double discount = 4;
+  double total_amount = 5;
+}

@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package customer;
+
+service CustomerService {
+  rpc CreateCustomerProfile (CreateCustomerRequest) returns (CustomerResponse);
+  rpc GetCustomerInfo (GetCustomerRequest) returns (CustomerInfoResponse);
+  rpc UpdateCustomerScore (UpdateScoreRequest) returns (CustomerResponse);
+}
+
+message CreateCustomerRequest {
+  int32 uid = 1;
+  string fullname = 2;
+}
+
+message CustomerResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetCustomerRequest {
+  int32 uid = 1;
+}
+
+message CustomerInfoResponse {
+  bool success = 1;
+  int32 uid = 2;
+  string fullname = 3;
+  int32 mid = 4;
+  int32 score = 5;
+  string message = 6;
+}
+
+message UpdateScoreRequest {
+  int32 uid = 1;
+  int32 score = 2;
+}

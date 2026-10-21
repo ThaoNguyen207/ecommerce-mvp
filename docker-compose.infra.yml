@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL (Dùng chung cho Auth, Customer, Order nhưng chia logical database sau)
+  postgres:
+    image: postgres:15-alpine
+    container_name: ecom_postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # 2. MongoDB (Dùng chung cho Product, Shipment)
+  mongodb:
+    image: mongo:6.0
+    container_name: ecom_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  # 3. Redis (Cho API Gateway - Cache & Rate limit)
+  redis:
+    image: redis:7-alpine
+    container_name: ecom_redis
+    ports:
+      - "6379:6379"
+
+  # 4. Zookeeper (Cần thiết cho Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: ecom_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  # 5. Kafka (Message Broker cho Order Created Event)
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: ecom_kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+volumes:
+  pgdata:
+  mongodata:

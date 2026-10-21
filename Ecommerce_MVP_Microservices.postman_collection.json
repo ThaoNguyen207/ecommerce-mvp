@@ -1,0 +1,441 @@
+{
+  "info": {
+    "_postman_id": "ecom-mvp-microservices-collection",
+    "name": "E-Commerce MVP Microservices API",
+    "description": "Bộ kiểm thử tự động toàn diện cho hệ thống Microservices E-Commerce MVP (API Gateway, Auth, Customer, Product, Order, Shipment, Redis Cache, Redis Rate Limiting, Kafka)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_uid",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "ship_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Kiểm tra tình trạng sống của API Gateway, Redis và các gRPC microservices downstream."
+      }
+    },
+    {
+      "name": "2. Auth - Register Customer (Bob)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.uid) {",
+              "    pm.collectionVariables.set('user_uid', jsonData.uid);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"bob_tester\",\n  \"password\": \"password123\",\n  \"fullname\": \"Bob Tester\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/auth/register",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Đăng ký tài khoản khách hàng mới. Tự động liên kết tạo hồ sơ Customer."
+      }
+    },
+    {
+      "name": "3. Auth - Login Customer (Get User Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.token) {",
+              "    pm.collectionVariables.set('user_token', jsonData.token);",
+              "    pm.collectionVariables.set('user_uid', jsonData.uid);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"bob_tester\",\n  \"password\": \"password123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Đăng nhập khách hàng để lấy JWT Token và lưu tự động vào biến user_token."
+      }
+    },
+    {
+      "name": "4. Auth - Login Admin (Get Admin Token)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.token) {",
+              "    pm.collectionVariables.set('admin_token', jsonData.token);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"superadmin\",\n  \"password\": \"adminpassword\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Đăng nhập tài khoản Quản trị viên để lấy Admin JWT Token (roleid = 1)."
+      }
+    },
+    {
+      "name": "5. Customer - Get Profile & Initial Tier",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/customers/{{user_uid}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customers", "{{user_uid}}"]
+        },
+        "description": "Xem thông tin khách hàng vừa tạo. Mặc định hạng BRONZE (mid = 1) và điểm score = 0."
+      }
+    },
+    {
+      "name": "6. Product - User Creates Product (Test Authorization - Expect 403)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pid\": 700,\n  \"pname\": \"iPad Pro M4\",\n  \"price\": 1200,\n  \"quantity\": 15\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/products",
+          "host": ["{{base_url}}"],
+          "path": ["api", "products"]
+        },
+        "description": "Kiểm tra phân quyền: Khách hàng thông thường (roleid = 2) KHÔNG ĐƯỢC PHÉP tạo sản phẩm (kỳ vọng mã lỗi 403 Forbidden)."
+      }
+    },
+    {
+      "name": "7. Product - Admin Creates Product (Expect 201)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pid\": 700,\n  \"pname\": \"iPad Pro M4\",\n  \"price\": 1200,\n  \"quantity\": 15\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/products",
+          "host": ["{{base_url}}"],
+          "path": ["api", "products"]
+        },
+        "description": "Admin (roleid = 1) tạo sản phẩm mới trên MongoDB."
+      }
+    },
+    {
+      "name": "8. Product - Get Product (Call 1: Cache Miss -> Database)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/products/700",
+          "host": ["{{base_url}}"],
+          "path": ["api", "products", "700"]
+        },
+        "description": "Lần gọi thứ 1: Cache Miss, dữ liệu được lấy từ MongoDB và ghi vào Redis Cache. Trả về _source: 'DATABASE'."
+      }
+    },
+    {
+      "name": "9. Product - Get Product (Call 2: Cache Hit -> Redis Cache)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/products/700",
+          "host": ["{{base_url}}"],
+          "path": ["api", "products", "700"]
+        },
+        "description": "Lần gọi thứ 2: Dữ liệu được trả thẳng từ Redis Cache mà không cần gọi Database. Trả về _source: 'REDIS_CACHE'."
+      }
+    },
+    {
+      "name": "10. Customer - Admin Upgrades Score to 120 (Gold Tier)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"score\": 120\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/customers/{{user_uid}}/score",
+          "host": ["{{base_url}}"],
+          "path": ["api", "customers", "{{user_uid}}", "score"]
+        },
+        "description": "Admin nâng điểm tích lũy cho Bob lên 120. Hệ thống tự động nâng hạng lên GOLD (mid = 3) để được giảm giá 10% khi đặt hàng."
+      }
+    },
+    {
+      "name": "11. Order - Bob Places Order (Discount Calculated)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.oid) {",
+              "    pm.collectionVariables.set('order_id', jsonData.oid);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [\n    {\n      \"pid\": 700,\n      \"qty\": 2\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/orders",
+          "host": ["{{base_url}}"],
+          "path": ["api", "orders"]
+        },
+        "description": "Bob mua 2 máy iPad Pro M4 ($1200 x 2 = $2400). Điểm score 120 >= 100 được chiết khấu 10% ($240). Tổng thanh toán là $2160. Lưu Order & OrderDetail vào PostgreSQL, trừ kho MongoDB, phát event Kafka."
+      }
+    },
+    {
+      "name": "12. Product - Verify Stock Deducted (15 -> 13)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/products/700",
+          "host": ["{{base_url}}"],
+          "path": ["api", "products", "700"]
+        },
+        "description": "Kiểm tra tồn kho sau khi đặt hàng: Cache cũ đã bị xóa, số lượng trong DB giảm từ 15 xuống 13."
+      }
+    },
+    {
+      "name": "13. Shipment - Bob Tracks Order Delivery Status (Via Kafka)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.shipid) {",
+              "    pm.collectionVariables.set('ship_id', jsonData.shipid);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/shipments/order/{{order_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "shipments", "order", "{{order_id}}"]
+        },
+        "description": "Bob tra cứu đơn vận chuyển vừa được Shipment Service tự động tạo từ Kafka event. Trạng thái ban đầu: PENDING."
+      }
+    },
+    {
+      "name": "14. Shipment - User Updates Status (Test Authorization - Expect 403)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"DELIVERED\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/shipments/{{ship_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "shipments", "{{ship_id}}", "status"]
+        },
+        "description": "Kiểm tra phân quyền: Khách hàng không được phép tự cập nhật trạng thái đơn vận chuyển (Kỳ vọng 403 Forbidden)."
+      }
+    },
+    {
+      "name": "15. Shipment - Admin Updates Status to 'DELIVERED'",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"DELIVERED\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/shipments/{{ship_id}}/status",
+          "host": ["{{base_url}}"],
+          "path": ["api", "shipments", "{{ship_id}}", "status"]
+        },
+        "description": "Admin hoặc Shipper cập nhật trạng thái giao hàng thành DELIVERED."
+      }
+    },
+    {
+      "name": "16. Shipment - Verify Final Delivery Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/shipments/{{ship_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "shipments", "{{ship_id}}"]
+        },
+        "description": "Kiểm tra trạng thái đơn vận chuyển sau khi cập nhật thành công (Kỳ vọng status = DELIVERED)."
+      }
+    }
+  ]
+}

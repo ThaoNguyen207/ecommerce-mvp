@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package shipment;
+
+service ShipmentService {
+  rpc UpdateShipmentStatus (UpdateShipmentStatusRequest) returns (ShipmentResponse);
+  rpc GetShipmentByOrderId (GetShipmentByOrderIdRequest) returns (ShipmentInfoResponse);
+  rpc GetShipmentById (GetShipmentByIdRequest) returns (ShipmentInfoResponse);
+}
+
+message UpdateShipmentStatusRequest {
+  int32 shipid = 1;
+  string status = 2; // e.g. PENDING, SHIPPING, DELIVERED, CANCELLED
+}
+
+message GetShipmentByOrderIdRequest {
+  int32 oid = 1;
+}
+
+message GetShipmentByIdRequest {
+  int32 shipid = 1;
+}
+
+message ShipmentResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ShipmentInfoResponse {
+  bool success = 1;
+  int32 shipid = 2;
+  int32 oid = 3;
+  string status = 4;
+  string message = 5;
+}

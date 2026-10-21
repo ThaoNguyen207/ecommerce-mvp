@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package product;
+
+service ProductService {
+  rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
+  rpc GetProduct (GetProductRequest) returns (ProductInfoResponse);
+  // Hàm mới để Order Service gọi trừ tồn kho
+  rpc DecreaseQuantity (DecreaseQuantityRequest) returns (ProductResponse);
+}
+
+message CreateProductRequest {
+  int32 pid = 1;
+  string pname = 2;
+  double price = 3;
+  int32 quantity = 4;
+}
+
+message ProductResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetProductRequest {
+  int32 pid = 1;
+}
+
+message ProductInfoResponse {
+  bool success = 1;
+  int32 pid = 2;
+  string pname = 3;
+  double price = 4;
+  int32 quantity = 5;
+  string message = 6;
+}
+
+// Cấu trúc dữ liệu cho hàm trừ tồn kho
+message DecreaseQuantityRequest {
+  int32 pid = 1;
+  int32 quantity_to_deduct = 2;
+}

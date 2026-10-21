@@ -1,0 +1,129 @@
+services:
+  # ================= INFRASTRUCTURE =================
+  postgres:
+    image: postgres:15-alpine
+    container_name: ecom_postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
+
+  mongodb:
+    image: mongo:6.0
+    container_name: ecom_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecom_redis
+    ports:
+      - "6379:6379"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: ecom_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: ecom_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  # ================= MICROSERVICES =================
+  api-gateway:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: ecom_api_gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - auth-service
+      - customer-service
+      - product-service
+      - order-service
+      - shipment-service
+
+  auth-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: auth-service
+    container_name: ecom_auth_service
+    environment:
+      - DATABASE_URL=postgres://root:rootpassword@postgres:5432/auth_db
+      - JWT_SECRET=ecommerce_super_secret_key_2026
+    depends_on:
+      - postgres
+
+  customer-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: customer-service
+    container_name: ecom_customer_service
+    environment:
+      - DATABASE_URL=postgres://root:rootpassword@postgres:5432/customer_db
+    depends_on:
+      - postgres
+
+  product-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: product-service
+    container_name: ecom_product_service
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/product_db
+    depends_on:
+      - mongodb
+
+  order-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: order-service
+    container_name: ecom_order_service
+    environment:
+      - DATABASE_URL=postgres://root:rootpassword@postgres:5432/order_db
+      - KAFKA_BROKER=kafka:9092
+    depends_on:
+      - postgres
+      - kafka
+
+  shipment-service:
+    build:
+      context: .
+      args:
+        SERVICE_NAME: shipment-service
+    container_name: ecom_shipment_service
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/shipment_db
+      - KAFKA_BROKER=kafka:9092
+      - GRPC_PORT=50055
+    depends_on:
+      - mongodb
+      - kafka
+
+volumes:
+  pgdata:
+  mongodata:
