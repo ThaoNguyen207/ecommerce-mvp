@@ -5,9 +5,12 @@ package product;
 service ProductService {
   rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
   rpc GetProduct (GetProductRequest) returns (ProductInfoResponse);
+  rpc GetAllProducts (EmptyProductRequest) returns (ProductListResponse);
   // Hàm mới để Order Service gọi trừ tồn kho
   rpc DecreaseQuantity (DecreaseQuantityRequest) returns (ProductResponse);
 }
+
+message EmptyProductRequest {}
 
 message CreateProductRequest {
   int32 pid = 1;
@@ -32,6 +35,12 @@ message ProductInfoResponse {
   double price = 4;
   int32 quantity = 5;
   string message = 6;
+}
+
+message ProductListResponse {
+  bool success = 1;
+  repeated ProductInfoResponse products = 2;
+  int32 total = 3;
 }
 
 // Cấu trúc dữ liệu cho hàm trừ tồn kho

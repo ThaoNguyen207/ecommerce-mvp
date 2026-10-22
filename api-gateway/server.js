@@ -181,6 +181,14 @@ app.post('/api/products', authenticateJWT, authorizeRole([1]), (req, res) => {
     });
 });
 
+// Lấy danh sách tất cả sản phẩm (TC-PRO-01)
+app.get('/api/products', (req, res) => {
+    productClient.GetAllProducts({}, (err, response) => {
+        if (err) return res.status(500).json({ success: false, message: err.message });
+        res.status(200).json(response);
+    });
+});
+
 // Lấy chi tiết sản phẩm (Có tích hợp Redis Cache)
 app.get('/api/products/:pid', async (req, res) => {
     const pid = parseInt(req.params.pid, 10);

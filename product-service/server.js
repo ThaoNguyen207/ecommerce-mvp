@@ -30,7 +30,6 @@ const productProto = grpc.loadPackageDefinition(packageDefinition).product;
 // Hàm tạo sản phẩm
 const CreateProduct = async (call, callback) => {
     try {
-        console.log("🚨 CHÚ Ý: ĐANG CHẠY BẢN CODE MỚI NHẤT!");
         const { pid, pname, price, quantity } = call.request;
         const newProduct = new Product({ pid, pname, price, quantity });
         await newProduct.save();
@@ -40,10 +39,10 @@ const CreateProduct = async (call, callback) => {
     }
 };
 
-// Hàm lấy thông tin sản phẩm
+// Hàm lấy thông tin sản phẩm theo ID
 const GetProduct = async (call, callback) => {
     try {
-        const product = await Product.findOne({ pid: call.request.pid }); // Đã sửa lỗi dính chữ
+        const product = await Product.findOne({ pid: call.request.pid });
         if (!product) return callback(null, { success: false, message: "Product not found" });
         callback(null, { success: true, pid: product.pid, pname: product.pname, price: product.price, quantity: product.quantity });
     } catch (error) {
@@ -51,11 +50,29 @@ const GetProduct = async (call, callback) => {
     }
 };
 
+// Hàm lấy danh sách tất cả sản phẩm
+const GetAllProducts = async (call, callback) => {
+    try {
+        const products = await Product.find().sort({ pid: 1 });
+        const list = products.map(p => ({
+            success: true,
+            pid: p.pid,
+            pname: p.pname,
+            price: p.price,
+            quantity: p.quantity,
+            message: ""
+        }));
+        callback(null, { success: true, products: list, total: list.length });
+    } catch (error) {
+        callback(null, { success: false, products: [], total: 0 });
+    }
+};
+
 // Hàm trừ tồn kho
 const DecreaseQuantity = async (call, callback) => {
     try {
         const { pid, quantity_to_deduct } = call.request;
-        const product = await Product.findOne({ pid }); // Đã sửa lỗi dính chữ
+        const product = await Product.findOne({ pid });
         
         if (!product) return callback(null, { success: false, message: "Product not found" });
         if (product.quantity < quantity_to_deduct) {
@@ -73,7 +90,7 @@ const DecreaseQuantity = async (call, callback) => {
 // Khởi chạy Server
 const main = () => {
     const server = new grpc.Server();
-    server.addService(productProto.ProductService.service, { CreateProduct, GetProduct, DecreaseQuantity });
+    server.addService(productProto.ProductService.service, { CreateProduct, GetProduct, DecreaseQuantity, GetAllProducts });
     
     const port = process.env.GRPC_PORT || 50053;
     server.bindAsync(`0.0.0.0:${port}`, grpc.ServerCredentials.createInsecure(), () => {
